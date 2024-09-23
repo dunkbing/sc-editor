@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import html2canvas from "html2canvas";
+import { toPng, toBlob } from "html-to-image";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -69,33 +69,29 @@ export default function ImageEditor() {
   const handleZoomIn = () => setZoom((prev) => Math.min(prev + 0.1, 3));
   const handleZoomOut = () => setZoom((prev) => Math.max(prev - 0.1, 0.1));
 
-  const handleSave = () => {
-    if (editedImageRef.current) {
-      html2canvas(editedImageRef.current).then((canvas) => {
-        const link = document.createElement("a");
-        link.download = "edited-image.png";
-        link.href = canvas.toDataURL();
-        link.click();
-      });
+  const handleSave = async () => {
+    if (!editedImageRef.current) {
+      return;
     }
+    const dataUrl = await toPng(editedImageRef.current);
+    const link = document.createElement("a");
+    link.download = "edited-image.png";
+    link.href = dataUrl;
+    link.click();
   };
 
-  const handleCopyToClipboard = () => {
-    if (editedImageRef.current) {
-      html2canvas(editedImageRef.current).then((canvas) => {
-        canvas.toBlob((blob) => {
-          if (blob) {
-            navigator.clipboard.write([
-              new ClipboardItem({ "image/png": blob }),
-            ]);
-          }
-        });
-      });
+  const handleCopyToClipboard = async () => {
+    if (!editedImageRef.current) {
+      return;
+    }
+    const blob = await toBlob(editedImageRef.current);
+    if (blob) {
+      navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
     }
   };
 
   return (
-    <div className="flex h-screen bg-gray-900 text-white">
+    <div className="flex max-h-screen bg-gray-900 text-white">
       <div className="flex-1 flex flex-col">
         <div className="p-4 border-b border-gray-800">
           <ToggleGroup type="multiple" className="justify-start">
@@ -125,7 +121,6 @@ export default function ImageEditor() {
               style={{
                 padding: `${padding}px`,
                 backgroundColor: background,
-                borderRadius: "8px",
                 transform: `scale(${zoom})`,
               }}
             >
